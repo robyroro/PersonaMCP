@@ -125,8 +125,7 @@ class Store:
         touched: set[str] = set()
         with self.db:
             for conv in conversations:
-                touched.add(conv.id)
-                self.db.execute(
+                inserted = self.db.execute(
                     "INSERT OR IGNORE INTO conversations VALUES(?,?,?,?,?,?,?)",
                     (
                         conv.id,
@@ -138,11 +137,15 @@ class Store:
                         json.dumps(conv.metadata),
                     ),
                 )
+                if inserted.rowcount:
+                    touched.add(conv.id)
                 for person in set(conv.participants) | {m.sender for m in conv.messages}:
-                    self.db.execute(
+                    inserted = self.db.execute(
                         "INSERT OR IGNORE INTO participants VALUES(?,?,?)",
                         (conv.id, person, person.strip().casefold()),
                     )
+                    if inserted.rowcount:
+                        touched.add(conv.id)
                 occurrences: Counter[str] = Counter()
                 for sequence, msg in enumerate(conv.messages):
                     key = stable_id(conv.id, msg.sender, msg.timestamp, msg.text)
@@ -157,7 +160,7 @@ class Store:
                         is_user = is_user or msg.sender_id.casefold() in config.identities(
                             conv.platform
                         )
-                    self.db.execute(
+                    inserted = self.db.execute(
                         "INSERT OR IGNORE INTO messages VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
                         (
                             message_id,
@@ -175,6 +178,8 @@ class Store:
                             int(msg.metadata.get("export_sequence", sequence)),
                         ),
                     )
+                    if inserted.rowcount:
+                        touched.add(conv.id)
             for conv_id in touched:
                 self.rebuild_interactions(conv_id, config)
             added = self.stats()["messages"] - before
@@ -182,7 +187,7 @@ class Store:
                 "INSERT INTO imports VALUES(?,?,?,?)",
                 (digest, platform, datetime.now().astimezone().isoformat(), added),
             )
-            if added:
+            if touched:
                 self.invalidate()
         return {"added": added, "duplicate_files": 0}
 

@@ -62,6 +62,24 @@ def test_instagram_current_html_text_slot_excludes_attachment_metadata() -> None
     assert conv.messages[0].text == "gen acu vin"
 
 
+def test_instagram_thread_identity_stable_across_export_paths(tmp_path: Path) -> None:
+    data = {
+        "participants": [{"name": "Owner"}],
+        "thread_path": "messages/inbox/alex_123",
+        "messages": [{"sender_name": "Owner", "content": "acu", "timestamp_ms": 1704067200000}],
+    }
+    adapter = InstagramImporter()
+    first = adapter.parse(json.dumps(data), "one/messages/inbox/alex_123/message_1.json")[0]
+    second = adapter.parse(json.dumps(data), "other/alex_123/message_1.json")[0]
+    assert first.id == second.id
+    folder = tmp_path / "alex_123"
+    folder.mkdir()
+    file = folder / "message_1.json"
+    file.write_text(json.dumps(data))
+    assert next(read_sources(folder, "instagram"))[0] == "alex_123/message_1.json"
+    assert next(read_sources(file, "instagram"))[0] == "alex_123/message_1.json"
+
+
 @pytest.mark.parametrize("nested", [True, False])
 def test_snapchat_json_layouts(nested: bool) -> None:
     chats = {

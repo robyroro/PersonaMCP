@@ -82,7 +82,9 @@ def read_sources(path: Path, platform: str) -> Iterator[tuple[str, str]]:
         if size > MAX_FILE_BYTES or total > MAX_IMPORT_BYTES:
             raise ValueError("Chat data exceeds safe import size limits")
         yield (
-            file.relative_to(root).as_posix() if root.is_dir() else file.name,
+            f"{file.parent.name}/{file.name}"
+            if platform == "instagram"
+            else (file.relative_to(root).as_posix() if root.is_dir() else file.name),
             file.read_text(encoding="utf-8-sig"),
         )
 
@@ -142,7 +144,9 @@ class InstagramImporter:
                     },
                 )
             )
-        external = str(data.get("thread_path") or str(PurePosixPath(source).parent))
+        external = PurePosixPath(
+            str(data.get("thread_path") or str(PurePosixPath(source).parent))
+        ).name
         return [
             Conversation(
                 "instagram",

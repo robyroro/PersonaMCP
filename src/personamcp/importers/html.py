@@ -97,7 +97,7 @@ def instagram_html(text: str, source: str) -> list[Conversation]:
         )
     if not messages:
         raise ValueError("No supported Instagram HTML messages found")
-    external = str(PurePosixPath(source).parent)
+    external = PurePosixPath(source).parent.name
     title_nodes = root.find(css="_a70e")
     title = title_nodes[0].text().strip() if title_nodes else external
     return [

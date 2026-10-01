@@ -18,11 +18,13 @@ from personamcp.storage import Store
 
 
 def test_dedup_does_not_change_message_counts(store: Store, config: Config) -> None:
+    index_interactions(store, TestEmbedding())
     before = store.stats()
     assert store.import_conversations([conversation()], "initial", "json", config)["added"] == 0
     assert store.stats() == before
     assert store.import_conversations([conversation()], "renamed", "json", config)["added"] == 0
     assert store.stats()["messages"] == before["messages"]
+    assert store.stats()["embeddings"] == before["embeddings"]
 
 
 def test_only_owner_messages_train_style(store: Store, config: Config) -> None:
@@ -131,6 +133,19 @@ def test_semantic_provider_index_resume_and_scope(store: Store) -> None:
     assert not result["partial_index"]
     assert all(r["person"] == "Alex" for r in result["results"])
     assert "untrusted" in result["trust_notice"]
+
+
+def test_identical_incoming_contexts_share_computation(store: Store) -> None:
+    class CountingProvider(TestEmbedding):
+        calls: list[list[str]] = []
+
+        def encode(self, texts: list[str]) -> list[list[float]]:
+            self.calls.append(texts)
+            return super().encode(texts)
+
+    provider = CountingProvider()
+    assert index_interactions(store, provider) == 60
+    assert provider.calls == [["mai vii azi la cafea?"]]
 
 
 def test_no_cross_person_fallback_when_vectors_missing(store: Store) -> None:

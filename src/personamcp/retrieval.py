@@ -146,6 +146,13 @@ def index_interactions(
     store: Store, provider: EmbeddingProvider, progress: Callable[[int], None] | None = None
 ) -> int:
     added = 0
+    cache: dict[str, tuple[int, bytes]] = {}
+    for row in store.db.execute(
+        """SELECT i.incoming,e.dimensions,e.vector FROM embeddings e
+        JOIN interactions i ON i.id=e.interaction_id WHERE e.provider=?""",
+        (provider.identity,),
+    ):
+        cache[row["incoming"]] = (row["dimensions"], row["vector"])
     while True:
         rows = store.rows(
             """SELECT i.id,i.incoming FROM interactions i
@@ -155,14 +162,18 @@ def index_interactions(
         )
         if not rows:
             break
-        vectors = provider.encode([r["incoming"] for r in rows])
-        if len(vectors) != len(rows):
+        texts = list(dict.fromkeys(r["incoming"] for r in rows if r["incoming"] not in cache))
+        vectors = provider.encode(texts) if texts else []
+        if len(vectors) != len(texts):
             raise ValueError("Embedding provider returned the wrong batch size")
+        for text, vector in zip(texts, vectors, strict=True):
+            cache[text] = (len(vector), pack(vector))
         with store.db:
-            for row, vector in zip(rows, vectors, strict=True):
+            for row in rows:
+                dimensions, blob = cache[row["incoming"]]
                 store.db.execute(
                     "INSERT INTO embeddings VALUES(?,?,?,?)",
-                    (row["id"], provider.identity, len(vector), pack(vector)),
+                    (row["id"], provider.identity, dimensions, blob),
                 )
         added += len(rows)
         if progress:
