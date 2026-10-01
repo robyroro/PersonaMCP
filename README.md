@@ -192,7 +192,9 @@ and stdio transport. Stdout carries only protocol messages; diagnostic output go
 persona serve
 ```
 
-Usually the client launches this command for you. Use **absolute paths** because the client's
+If the data directory has not been initialized yet, `serve` creates it the same way
+`persona init` does and reports this on stderr; tools return empty results until you import
+exports. Usually the client launches this command for you. Use **absolute paths** because the client's
 working directory can differ from your terminal's. Example configuration for clients accepting
 the common `mcpServers` structure:
 
