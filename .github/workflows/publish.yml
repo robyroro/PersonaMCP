@@ -1,0 +1,68 @@
+name: publish
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.12.21'
+
+      - name: check tag matches version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          py=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          js=$(python3 -c "import json; print(json.load(open('server.json'))['version'])")
+          pkg=$(python3 -c "import re; print(re.search(r'__version__ = \"(.+)\"', open('src/personamcp/__init__.py').read()).group(1))")
+          echo "tag=$tag pyproject=$py server.json=$js package=$pkg"
+          [ "$tag" = "$py" ] && [ "$tag" = "$js" ] && [ "$tag" = "$pkg" ]
+
+      - run: uv sync --locked
+      - run: uv run --no-sync pytest
+      - run: uv build
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+  pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  mcp-registry:
+    needs: pypi
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - run: ./mcp-publisher login github-oidc
+
+      # PyPI can take a moment before the new version shows up in its API.
+      - name: publish
+        run: |
+          for i in 1 2 3 4 5; do
+            ./mcp-publisher publish && exit 0
+            sleep 20
+          done
+          exit 1

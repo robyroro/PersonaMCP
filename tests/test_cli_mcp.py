@@ -123,6 +123,26 @@ def test_owner_must_match_before_import(tmp_path: Path) -> None:
     assert "match no exported messages" in result.output
 
 
+def test_serve_initializes_an_empty_home_and_lists_tools(tmp_path: Path) -> None:
+    home = tmp_path / "first-launch"
+
+    async def scenario() -> None:
+        parameters = StdioServerParameters(
+            command=sys.executable, args=["-m", "personamcp", "--home", str(home), "serve"]
+        )
+        with anyio.fail_after(30):
+            async with stdio_client(parameters) as (read, write):
+                async with ClientSession(read, write) as client:
+                    await client.initialize()
+                    listed = await client.list_tools()
+                    assert len(listed.tools) == 6
+                    summary = await client.call_tool("get_persona_summary", {})
+                    assert not summary.isError, summary
+
+    anyio.run(scenario)
+    assert (home / "config.json").exists()
+
+
 def test_official_mcp_stdio_client_all_tools(store: Store, config: Config) -> None:
     analyze(store, config)
 

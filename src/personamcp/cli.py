@@ -71,15 +71,19 @@ def output(data: object) -> None:
     typer.echo(json.dumps(data, ensure_ascii=False, indent=2))
 
 
+def initialize_home(home: Path) -> None:
+    """Create the config and database if missing; existing data is never overwritten."""
+    Config.load(home).save(home)
+    from personamcp.storage import Store
+
+    Store(home).close()
+
+
 @app.command()
 def init() -> None:
     """Initialize a private local database and configuration without overwriting existing data."""
     home = state["home"]
-    with_init = Config.load(home)
-    with_init.save(home)
-    from personamcp.storage import Store
-
-    Store(home).close()
+    initialize_home(home)
     typer.echo(f"PersonaMCP initialized: {home}\nSet your owner name with persona config set-name.")
 
 
@@ -387,9 +391,11 @@ def reset(yes: Annotated[bool, typer.Option("--yes")] = False) -> None:
 @app.command()
 def serve() -> None:
     """Run official MCP SDK stdio transport. Stdout contains only MCP protocol messages."""
+    # MCP clients and registries launch `serve` directly, so a first launch creates the same
+    # empty setup as `persona init`. The notice goes to stderr; stdout is reserved for MCP.
     if not (state["home"] / "config.json").exists():
-        typer.echo("Run persona init first", err=True)
-        raise typer.Exit(1)
+        initialize_home(state["home"])
+        typer.echo(f"PersonaMCP initialized an empty data directory: {state['home']}", err=True)
     from personamcp.mcp_server import create_server
 
     create_server(state["home"]).run(transport="stdio")
