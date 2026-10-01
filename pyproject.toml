@@ -48,6 +48,6 @@ disallow_untyped_defs = true
 follow_imports = "skip"
 
 [[tool.mypy.overrides]]
-module = ["sentence_transformers", "sentence_transformers.*"]
+module = ["sentence_transformers", "sentence_transformers.*", "huggingface_hub"]
 ignore_missing_imports = true
 follow_imports = "skip"
