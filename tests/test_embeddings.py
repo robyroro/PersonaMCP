@@ -8,12 +8,21 @@ from typing import Any
 import pytest
 
 from personamcp.config import Config
-from personamcp.embeddings import LocalEmbeddingProvider, prepare_model
+from personamcp.embeddings import LocalEmbeddingProvider, prepare_model, warm_runtime
 
 
 def test_unprepared_model_fails_without_network(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="prepare"):
         LocalEmbeddingProvider(tmp_path, Config()).encode(["private text"])
+
+
+def test_runtime_warmup_only_imports_local_libraries(monkeypatch: pytest.MonkeyPatch) -> None:
+    import importlib
+
+    calls: list[str] = []
+    monkeypatch.setattr(importlib, "import_module", lambda name: calls.append(name))
+    warm_runtime()
+    assert calls == ["sentence_transformers"]
 
 
 def test_local_model_loads_only_offline_and_caches(

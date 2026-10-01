@@ -211,6 +211,19 @@ that only support remote HTTP MCP cannot directly launch this local stdio server
 does not include a tunnel/HTTP bridge; exposing sensitive local data remotely requires a separate,
 explicit deployment decision.
 
+With a prepared semantic model, allow up to 90 seconds for startup and 120 seconds for tools on
+slower machines. The native numerical runtime is loaded before stdio reader threads start to
+avoid Windows BLAS loader deadlocks. Weights are loaded on the first semantic query and cached.
+For Codex these settings belong in the server's configuration table:
+
+```toml
+[mcp_servers.personamcp]
+command = "/absolute/path/to/venv/bin/persona"
+args = ["--home", "/absolute/path/to/private/persona-data", "serve"]
+startup_timeout_sec = 90
+tool_timeout_sec = 120
+```
+
 Tools:
 
 | Tool | Result |

@@ -1,25 +1,30 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from functools import partial
 from pathlib import Path
 from threading import Lock
 from typing import Any
 
+import anyio
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
-from personamcp.embeddings import LocalEmbeddingProvider
+from personamcp.config import Config
+from personamcp.embeddings import LocalEmbeddingProvider, warm_runtime
 from personamcp.service import PersonaService
 
 
 def create_server(home: Path) -> FastMCP:
+    if Config.load(home).model_revision and (home / "model").is_dir():
+        warm_runtime()
     cached_provider: LocalEmbeddingProvider | None = None
     cache_lock = Lock()
     readonly = ToolAnnotations(
         readOnlyHint=True, destructiveHint=False, openWorldHint=False, idempotentHint=True
     )
 
-    # FastMCP sync tools run in worker threads: open/close a connection within each call.
+    # Each worker opens/closes its own SQLite connection; inference stays off the event loop.
     def invoke(method: str, **kwargs: Any) -> dict[str, Any]:
         nonlocal cached_provider
         service = PersonaService(home)
@@ -36,6 +41,9 @@ def create_server(home: Path) -> FastMCP:
         finally:
             service.close()
 
+    async def invoke_async(method: str, **kwargs: Any) -> dict[str, Any]:
+        return await anyio.to_thread.run_sync(partial(invoke, method, **kwargs))
+
     @asynccontextmanager
     async def lifespan(server: FastMCP) -> Any:
         yield {}
@@ -48,24 +56,26 @@ def create_server(home: Path) -> FastMCP:
     )
 
     @server.tool(annotations=readonly)
-    def get_style_profile(context: str | None = None) -> dict[str, Any]:
+    async def get_style_profile(context: str | None = None) -> dict[str, Any]:
         """Return measured outgoing-message style for a global or user-assigned context."""
-        return invoke("get_style_profile", context=context)
+        return await invoke_async("get_style_profile", context=context)
 
     @server.tool(annotations=readonly)
-    def get_person_style(person: str) -> dict[str, Any]:
+    async def get_person_style(person: str) -> dict[str, Any]:
         """Get one-to-one writing statistics for an exact recipient name, never group history."""
-        return invoke("get_person_style", person=person)
+        return await invoke_async("get_person_style", person=person)
 
     @server.tool(annotations=readonly)
-    def search_messages(
+    async def search_messages(
         query: str, person: str | None = None, platform: str | None = None, limit: int = 5
     ) -> dict[str, Any]:
         """Search owner's messages; use recipient/platform filters to minimize disclosure."""
-        return invoke("search_messages", query=query, person=person, platform=platform, limit=limit)
+        return await invoke_async(
+            "search_messages", query=query, person=person, platform=platform, limit=limit
+        )
 
     @server.tool(annotations=readonly)
-    def find_similar_interactions(
+    async def find_similar_interactions(
         message: str,
         person: str | None = None,
         context: str | None = None,
@@ -73,7 +83,7 @@ def create_server(home: Path) -> FastMCP:
         limit: int = 5,
     ) -> dict[str, Any]:
         """Return bounded real incoming/reply examples, marking semantic/lexical coverage."""
-        return invoke(
+        return await invoke_async(
             "find_similar_interactions",
             message=message,
             person=person,
@@ -83,14 +93,14 @@ def create_server(home: Path) -> FastMCP:
         )
 
     @server.tool(annotations=readonly)
-    def get_writing_context(
+    async def get_writing_context(
         message: str,
         person: str | None = None,
         context: str | None = None,
         platform: str | None = None,
     ) -> dict[str, Any]:
         """Return compact style and up to three untrusted examples; never generate a reply."""
-        return invoke(
+        return await invoke_async(
             "get_writing_context",
             message=message,
             person=person,
@@ -99,8 +109,8 @@ def create_server(home: Path) -> FastMCP:
         )
 
     @server.tool(annotations=readonly)
-    def get_persona_summary() -> dict[str, Any]:
+    async def get_persona_summary() -> dict[str, Any]:
         """Return compact profile and index coverage, without raw conversation history."""
-        return invoke("get_persona_summary")
+        return await invoke_async("get_persona_summary")
 
     return server

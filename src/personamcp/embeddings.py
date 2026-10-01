@@ -9,6 +9,24 @@ from typing import Any, Protocol
 from personamcp.config import Config
 
 
+def warm_runtime() -> None:
+    """Load native numerical libraries before MCP stdio starts blocking reader threads.
+
+    On Windows, deferred BLAS imports can deadlock against an active stdio reader.
+    No weights or conversation data are loaded and no network request is made.
+    """
+    os.environ["HF_HUB_OFFLINE"] = "1"
+    os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
+    os.environ["TRANSFORMERS_OFFLINE"] = "1"
+    try:
+        import importlib
+
+        importlib.import_module("sentence_transformers")
+    except ImportError:
+        # Base installs still serve profiles/lexical search; semantic calls report missing extras.
+        pass
+
+
 class EmbeddingProvider(Protocol):
     @property
     def identity(self) -> str: ...
