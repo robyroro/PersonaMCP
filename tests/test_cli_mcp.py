@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -22,6 +24,20 @@ def test_version_without_subcommand() -> None:
     result = runner.invoke(app, ["--version"])
     assert result.exit_code == 0
     assert result.stdout.strip() == "0.1.0"
+
+
+def test_json_pipeline_unicode_under_legacy_encoding(store: Store) -> None:
+    with store.db:
+        store.db.execute("UPDATE messages SET text='bună șț 😄' WHERE is_user=1")
+    result = subprocess.run(
+        [sys.executable, "-m", "personamcp", "--home", str(store.path.parent), "search", "bună"],
+        capture_output=True,
+        env={**os.environ, "PYTHONIOENCODING": "cp1252"},
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+    data = json.loads(result.stdout.decode("utf-8"))
+    assert data["results"][0]["historical_quote"]["user_message"] == "bună șț 😄"
 
 
 def run(home: Path, *args: str) -> Any:

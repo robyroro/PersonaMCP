@@ -4,6 +4,7 @@ import hashlib
 import json
 import shutil
 import sqlite3
+import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -64,6 +65,9 @@ def session() -> Iterator[PersonaService]:
 
 
 def output(data: object) -> None:
+    # Windows redirected stdout can default to a legacy code page. JSON pipelines must be UTF-8.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     typer.echo(json.dumps(data, ensure_ascii=False, indent=2))
 
 
