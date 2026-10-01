@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "personamcp": {
+      "command": "/absolute/path/to/venv/bin/persona",
+      "args": ["--home", "/absolute/path/to/private/persona-data", "serve"]
+    }
+  }
+}

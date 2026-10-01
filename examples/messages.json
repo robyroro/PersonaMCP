@@ -1,0 +1,14 @@
+{
+  "id": "synthetic-coffee-chat",
+  "platform": "json",
+  "title": "Alex (synthetic example)",
+  "participants": ["Owner", "Alex"],
+  "context": "casual",
+  "messages": [
+    {"sender": "Alex", "text": "ce faci diseara?", "timestamp": "2024-01-01T17:00:00Z"},
+    {"sender": "Owner", "text": "nu stiu inca =)) poate ies putin", "timestamp": "2024-01-01T17:00:10Z"},
+    {"sender": "Alex", "text": "mai vii azi la cafea?", "timestamp": "2024-01-02T09:00:00Z"},
+    {"sender": "Owner", "text": "da gen vin acu", "timestamp": "2024-01-02T09:00:10Z"},
+    {"sender": "Owner", "text": "in 10 min", "timestamp": "2024-01-02T09:00:20Z"}
+  ]
+}
