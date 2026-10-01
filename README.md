@@ -13,7 +13,16 @@ PersonaMCP gives the connected writer evidence instead of a guessed personality.
 
 ## Install
 
-Python 3.11 or newer. Install from this repository; a PyPI release is not currently published.
+Python 3.11 or newer. Install from PyPI:
+
+```sh
+python -m pip install personamcp
+persona --help
+```
+
+Or run it without installing, using [uv](https://docs.astral.sh/uv/): `uvx personamcp --help`.
+
+To work from a checkout of this repository:
 
 ```sh
 git clone https://github.com/robyroro/PersonaMCP.git
@@ -198,6 +207,19 @@ the common `mcpServers` structure:
 }
 ```
 
+With uv installed, the client can run the published package directly:
+
+```json
+{
+  "mcpServers": {
+    "personamcp": {
+      "command": "uvx",
+      "args": ["personamcp", "--home", "/absolute/path/to/private/persona-data", "serve"]
+    }
+  }
+}
+```
+
 On Windows the command is `C:\\absolute\\path\\.venv\\Scripts\\persona.exe`. For Codex:
 
 ```sh
@@ -342,6 +364,8 @@ This version is a CLI/MCP engine. Export schemas can change; group recipient inf
 psychological profiling, automatic typo correction, speech/media analysis, encryption at rest,
 cloud embedding providers, HTTP hosting, and a frontend are outside its current support.
 
-MIT licensed. Model weights and dependencies retain their own licenses; see the
+MIT licensed © [Robert Vind-Gardoș](https://stratagency.ro/en/robert-vind-gardos) ([@robyroro](https://github.com/robyroro)). Model weights and dependencies retain their own licenses; see the
 [multilingual MiniLM model card](https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2)
 and [Sentence Transformers documentation](https://www.sbert.net/docs/sentence_transformer/pretrained_models.html).
+
+<!-- mcp-name: io.github.robyroro/PersonaMCP -->

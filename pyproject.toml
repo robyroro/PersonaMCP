@@ -9,6 +9,14 @@ description = "Local-first personal communication memory for AI agents"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
+authors = [{ name = "Robert Vind-Gardoș" }]
+keywords = ["mcp", "mcp-server", "memory", "writing-style", "personal-data", "local-first"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Communications :: Chat",
+    "Topic :: Text Processing :: Linguistic",
+]
 dependencies = ["mcp>=1.26,<2", "typer>=0.16,<1", "platformdirs>=4,<5"]
 
 [project.optional-dependencies]
@@ -17,8 +25,14 @@ semantic = ["sentence-transformers>=5,<6"]
 [dependency-groups]
 dev = ["pytest>=8,<10", "ruff>=0.12,<1", "mypy>=1.16,<2", "pytest-cov>=6,<8"]
 
+[project.urls]
+Repository = "https://github.com/robyroro/PersonaMCP"
+Issues = "https://github.com/robyroro/PersonaMCP/issues"
+Author = "https://stratagency.ro/en/robert-vind-gardos"
+
 [project.scripts]
 persona = "personamcp.cli:app"
+personamcp = "personamcp.cli:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/personamcp"]
@@ -29,7 +43,7 @@ packages = ["src/personamcp"]
 [tool.hatch.build.targets.sdist]
 include = ["src", "tests", "examples", "skills", "docs", "README.md", "LICENSE",
            "CONTRIBUTING.md", "SECURITY.md", "CODE_OF_CONDUCT.md", "pyproject.toml", "uv.lock",
-           ".github/workflows/ci.yml", ".gitignore"]
+           ".github/workflows/ci.yml", ".github/workflows/publish.yml", ".gitignore", "server.json"]
 
 [tool.ruff]
 line-length = 100
